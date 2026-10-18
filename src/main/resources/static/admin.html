@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Адміністратор - Салон Орхідея</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><a href="admin.html">Адміністратор</a><a href="index.html">На сайт</a></header>
+<main>
+<div id="msg" class="msg"></div>
+
+<h2>Запис</h2>
+<form id="bform">
+  <input type="hidden" id="bid">
+  <label for="lastName">Прізвище</label><input id="lastName" maxlength="50" required>
+  <label for="firstName">Ім'я</label><input id="firstName" maxlength="50" required>
+  <label for="phone">Телефон</label><input id="phone" placeholder="+380501234567" required>
+  <label for="email">Email</label><input id="email" type="email" maxlength="100">
+  <label for="service">Послуга</label><select id="service"></select>
+  <label for="date">Дата</label><input id="date" type="date" required>
+  <label for="time">Час</label><select id="time"></select>
+  <button type="submit" id="bsave">Створити запис</button>
+  <button type="button" id="bcancel">Очистити форму</button>
+</form>
+
+<h2>Історія записів</h2>
+<div class="row">
+  З <input type="date" id="fFrom"> по <input type="date" id="fTo">
+  Клієнт <input id="fClient" placeholder="прізвище або телефон">
+  Послуга <select id="fService"><option value="">Усі</option></select>
+  <button type="button" id="fApply">Знайти</button>
+</div>
+<table><thead><tr><th>№</th><th>Клієнт</th><th>Телефон</th><th>Послуга</th><th>Дата</th><th>Час</th><th>Знижка</th><th>Ціна, грн</th><th></th></tr></thead>
+<tbody id="brows"></tbody></table>
+
+<h2>Каталог послуг</h2>
+<form id="sform">
+  <input type="hidden" id="sid">
+  <div class="row">
+    Назва <input id="sname" maxlength="100" required>
+    Тривалість <select id="sdur"><option>30</option><option>60</option></select>
+    Ціна <input id="sprice" type="number" step="0.01" min="0.01" max="99999.99" required>
+    <button type="submit" id="ssave">Додати послугу</button>
+    <button type="button" id="sclear">Очистити</button>
+  </div>
+</form>
+<table><thead><tr><th>Назва</th><th>Тривалість, хв</th><th>Ціна, грн</th><th></th></tr></thead>
+<tbody id="srows"></tbody></table>
+</main>
+<script src="app.js"></script>
+<script>
+var services = [];
+var $ = function (id) {
+  return document.getElementById(id);
+};
+
+function cell(tr, text) {
+  var td = document.createElement('td');
+  td.textContent = text;
+  tr.appendChild(td); return td;
+}
+function button(td, text, fn) { var b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.onclick = fn; td.appendChild(b); }
+
+function refreshSlots(current) {
+  var url = '/api/admin/slots' + ($('bid').value ? '?excludeBookingId=' + $('bid').value : '');
+  return loadSlotsInto('time', $('service').value, $('date').value, url, current)
+    .catch(function (e) { showMsg('msg', e.message, false); });
+}
+
+async function loadServices() {
+  services = await loadServicesInto('service');
+  var f = $('fService');
+  f.innerHTML = '<option value="">Усі</option>';
+  var tb = $('srows');
+  tb.innerHTML = '';
+  services.forEach(function (s) {
+    var o = document.createElement('option'); o.value = s.id; o.textContent = s.name; f.appendChild(o);
+    var tr = document.createElement('tr');
+    cell(tr, s.name); cell(tr, s.durationMin); cell(tr, s.price);
+    var td = cell(tr, '');
+    button(td, 'Змінити', function () {
+      $('sid').value = s.id; $('sname').value = s.name; $('sdur').value = s.durationMin; $('sprice').value = s.price;
+      $('ssave').textContent = 'Зберегти послугу';
+    });
+    button(td, 'Видалити', async function () {
+      try { await api('/api/admin/services/' + s.id, { method: 'DELETE' }); showMsg('msg', 'Послугу видалено', true); await loadServices(); }
+      catch (e) { showMsg('msg', e.message, false); }
+    });
+    tb.appendChild(tr);
+  });
+}
+
+async function loadBookings() {
+  var p = new URLSearchParams();
+  if ($('fFrom').value) { p.set('from', $('fFrom').value); }
+  if ($('fTo').value) { p.set('to', $('fTo').value); }
+  if ($('fClient').value) { p.set('client', $('fClient').value); }
+  if ($('fService').value) { p.set('serviceId', $('fService').value); }
+  var list = await api('/api/admin/bookings?' + p.toString());
+  var tb = $('brows');
+  tb.innerHTML = '';
+  list.forEach(function (b) {
+    var tr = document.createElement('tr');
+    cell(tr, b.id); cell(tr, b.lastName + ' ' + b.firstName); cell(tr, b.phone); cell(tr, b.serviceName);
+    cell(tr, b.date); cell(tr, b.startTime + ' - ' + b.endTime); cell(tr, b.discountPercent + '%'); cell(tr, b.finalPrice);
+    var td = cell(tr, '');
+    button(td, 'Змінити', function () {
+      $('bid').value = b.id; $('lastName').value = b.lastName; $('firstName').value = b.firstName;
+      $('phone').value = b.phone; $('email').value = b.email || ''; $('service').value = b.serviceId; $('date').value = b.date;
+      $('bsave').textContent = 'Зберегти зміни';
+      refreshSlots(b.startTime);
+      window.scrollTo(0, 0);
+    });
+    button(td, 'Видалити', async function () {
+      try { await api('/api/admin/bookings/' + b.id, { method: 'DELETE' }); showMsg('msg', 'Запис видалено', true); await loadBookings(); }
+      catch (e) { showMsg('msg', e.message, false); }
+    });
+    tb.appendChild(tr);
+  });
+}
+
+function clearBooking() {
+  $('bform').reset(); $('bid').value = ''; $('bsave').textContent = 'Створити запис'; $('date').value = today(); refreshSlots();
+}
+
+$('date').min = today();
+$('date').value = today();
+$('service').addEventListener('change', function () { refreshSlots(); });
+$('date').addEventListener('change', function () { refreshSlots(); });
+$('bcancel').onclick = clearBooking;
+$('fApply').onclick = function () { loadBookings().catch(function (e) { showMsg('msg', e.message, false); }); };
+
+$('bform').addEventListener('submit', async function (ev) {
+  ev.preventDefault();
+  var body = {
+    lastName: $('lastName').value, firstName: $('firstName').value, phone: $('phone').value, email: $('email').value,
+    serviceId: Number($('service').value), date: $('date').value, time: $('time').value
+  };
+  var id = $('bid').value;
+  try {
+    await api(id ? '/api/admin/bookings/' + id : '/api/admin/bookings', jsonOptions(id ? 'PUT' : 'POST', body));
+    showMsg('msg', id ? 'Запис змінено' : 'Запис створено', true);
+    clearBooking();
+    await loadBookings();
+  } catch (e) { showMsg('msg', e.message, false); }
+});
+
+$('sform').addEventListener('submit', async function (ev) {
+  ev.preventDefault();
+  var body = { name: $('sname').value, durationMin: Number($('sdur').value), price: Number($('sprice').value) };
+  var id = $('sid').value;
+  try {
+    await api(id ? '/api/admin/services/' + id : '/api/admin/services', jsonOptions(id ? 'PUT' : 'POST', body));
+    showMsg('msg', id ? 'Послугу змінено' : 'Послугу додано', true);
+    $('sform').reset(); $('sid').value = ''; $('ssave').textContent = 'Додати послугу';
+    await loadServices();
+  } catch (e) { showMsg('msg', e.message, false); }
+});
+$('sclear').onclick = function () { $('sform').reset(); $('sid').value = ''; $('ssave').textContent = 'Додати послугу'; };
+
+loadServices().then(function () { refreshSlots(); return loadBookings(); })
+  .catch(function (e) { showMsg('msg', e.message, false); });
+</script></body></html>

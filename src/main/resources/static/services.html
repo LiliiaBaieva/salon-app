@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Послуги - Салон Орхідея</title><link rel="stylesheet" href="style.css"></head>
+<body><header><a href="index.html">Головна</a><a href="services.html">Послуги</a><a href="booking.html">Запис онлайн</a><a href="contacts.html">Контакти</a></header>
+<main>
+<h1>Послуги та ціни</h1>
+<table><thead><tr><th>Послуга</th><th>Тривалість, хв</th><th>Ціна, грн</th></tr></thead><tbody id="rows"></tbody></table>
+<p>Знижка 3% діє з п'ятого запису.</p>
+</main>
+<script src="app.js"></script>
+<script>
+api('/api/services').then(function (list) {
+  var tb = document.getElementById('rows');
+  list.forEach(function (s) {
+    var tr = document.createElement('tr');
+    [s.name, s.durationMin, s.price].forEach(function (v) {
+      var td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+});
+</script></body></html>

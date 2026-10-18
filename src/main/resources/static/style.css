@@ -1,0 +1,16 @@
+body { font-family: Arial, sans-serif; margin: 0; color: #222; background: #faf7fb; }
+header { background: #6a2c7a; color: #fff; padding: 12px 24px; }
+header a { color: #fff; margin-right: 18px; text-decoration: none; }
+header a:hover { text-decoration: underline; }
+main { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+h1, h2 { color: #6a2c7a; }
+table { border-collapse: collapse; width: 100%; background: #fff; }
+th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+th { background: #eee; }
+label { display: block; margin: 8px 0 2px; }
+input, select { padding: 6px; width: 100%; max-width: 320px; box-sizing: border-box; }
+button { padding: 7px 14px; margin: 8px 6px 0 0; cursor: pointer; }
+.row input, .row select { width: auto; }
+.msg { margin: 10px 0; padding: 8px; display: none; }
+.msg.ok { display: block; background: #e3f5e3; border: 1px solid #7bbf7b; }
+.msg.err { display: block; background: #fbe3e3; border: 1px solid #d77; }

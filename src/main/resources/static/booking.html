@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Запис онлайн - Салон Орхідея</title><link rel="stylesheet" href="style.css"></head>
+<body><header><a href="index.html">Головна</a><a href="services.html">Послуги</a><a href="booking.html">Запис онлайн</a><a href="contacts.html">Контакти</a></header>
+<main>
+<h1>Запис на послугу</h1>
+<form id="form">
+  <label for="lastName">Прізвище</label><input id="lastName" maxlength="50" required>
+  <label for="firstName">Ім'я</label><input id="firstName" maxlength="50" required>
+  <label for="phone">Телефон</label><input id="phone" placeholder="+380501234567" required>
+  <label for="email">Email</label><input id="email" type="email" maxlength="100">
+  <label for="service">Послуга</label><select id="service"></select>
+  <label for="date">Дата</label><input id="date" type="date" required>
+  <label for="time">Час</label><select id="time"></select>
+  <button type="submit">Записатися</button>
+</form>
+<div id="msg" class="msg"></div>
+<div id="confirm"></div>
+</main>
+<script src="app.js"></script>
+<script>
+var dateEl = document.getElementById('date');
+dateEl.min = today();
+dateEl.value = today();
+
+function refreshSlots() {
+  loadSlotsInto('time', document.getElementById('service').value, dateEl.value, '/api/slots')
+    .catch(function (e) { showMsg('msg', e.message, false); });
+}
+document.getElementById('service').addEventListener('change', refreshSlots);
+dateEl.addEventListener('change', refreshSlots);
+loadServicesInto('service').then(refreshSlots);
+
+document.getElementById('form').addEventListener('submit', async function (ev) {
+  ev.preventDefault();
+  var body = {
+    lastName: document.getElementById('lastName').value,
+    firstName: document.getElementById('firstName').value,
+    phone: document.getElementById('phone').value,
+    email: document.getElementById('email').value,
+    serviceId: Number(document.getElementById('service').value),
+    date: dateEl.value,
+    time: document.getElementById('time').value
+  };
+  try {
+    var b = await api('/api/bookings', jsonOptions('POST', body));
+    showMsg('msg', 'Запис оформлено.', true);
+    document.getElementById('confirm').innerHTML =
+      '<h2>Підтвердження запису</h2><table>' +
+      '<tr><th>Номер запису</th><td>' + b.id + '</td></tr>' +
+      '<tr><th>Клієнт</th><td>' + b.lastName + ' ' + b.firstName + '</td></tr>' +
+      '<tr><th>Послуга</th><td>' + b.serviceName + '</td></tr>' +
+      '<tr><th>Дата</th><td>' + b.date + '</td></tr>' +
+      '<tr><th>Час</th><td>' + b.startTime + ' - ' + b.endTime + '</td></tr>' +
+      '<tr><th>Знижка</th><td>' + b.discountPercent + '%</td></tr>' +
+      '<tr><th>До сплати</th><td>' + b.finalPrice + ' грн</td></tr></table>' +
+      '<p>Змінити або скасувати запис можна за телефоном +380501234567.</p>';
+    refreshSlots();
+  } catch (e) {
+    document.getElementById('confirm').innerHTML = '';
+    showMsg('msg', e.message, false);
+    refreshSlots();
+  }
+});
+</script></body></html>
